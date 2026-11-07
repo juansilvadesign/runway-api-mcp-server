@@ -516,7 +516,12 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
       },
     } as RequestInit);
     if (!res.ok) throw new Error(`Runway ${res.status}: ${await res.text()}`);
-    return res.json();
+    // DELETE /tasks/{id} answers 204 No Content. Calling res.json() on that
+    // empty body threw "Unexpected end of JSON input" AFTER the task was
+    // already cancelled, so the tool reported failure for a success and a
+    // retry was billed again. An empty body is a successful, bodiless reply.
+    const text = await res.text();
+    return text.trim() === "" ? null : JSON.parse(text);
   }
 
   // Claude Desktop (and some other hosts) hard-timeout MCP tool calls around
